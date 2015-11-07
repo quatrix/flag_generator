@@ -54,8 +54,8 @@ var TRIANGLE_TYPES = [
 			[12.25 * R, 19.9 * R],
 			[0, 19.9 * R ],
 		],
-		"offer_inner_x": 0,
-		"offer_inner_y": 4,
+		"offset_inner_x": 0,
+		"offset_inner_y": 4,
 		on_draw: function(path) {
 			var rotate_angle = random_choice(ROTATE_OPTIONS);
 
