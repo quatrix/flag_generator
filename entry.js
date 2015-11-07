@@ -7,6 +7,9 @@ var FLAG_HEIGHT = R * 33;
 var LINE_WIDTH = 1.1 * R;
 var LINE_HEIGHTS = [R * 3, R * 5, R * 11, R * 17];
 var COLORS = ["#FFFFFF", "#29489E", "#D0091E", "#017A3D", "000000"];
+
+var possible_colors;
+
 var ROTATE_OPTIONS = [0, 90, 180, 270];
 
 var last_svg = null;
@@ -84,6 +87,7 @@ function random_choice(l) {
 function draw_line(y, height, color) {
 	var line = new Path.Rectangle(0, y, FLAG_WIDTH, height);
 	line.fillColor = color;
+	line.sendToBack();
 }
 
 function draw_triangle() {
@@ -96,7 +100,13 @@ function draw_triangle() {
 
 	triangle.closed = true;
 
-	triangle.fillColor = random_choice(COLORS);
+	var color = random_choice(possible_colors);
+	var index = possible_colors.indexOf(color);
+	console.log("BEFORE", possible_colors);
+	possible_colors.splice(index, 1);
+	console.log("AFTER", possible_colors);
+
+	triangle.fillColor = color;
 
 	if (random_choice([true, false])) {
 		var inner_triangle = triangle.clone();
@@ -109,7 +119,7 @@ function draw_triangle() {
 				triangle,
 				inner_triangle,
 			],
-			fillColor: random_choice(COLORS),
+			fillColor: color
 		});
 
 		type.on_draw(path);
@@ -134,7 +144,7 @@ function draw_lines() {
 		var color;
 		
 		while (true) {
-			color = random_choice(COLORS);
+			color = random_choice(possible_colors);
 
 			if (color != prev_color) {
 				prev_color = color;
@@ -150,7 +160,6 @@ function draw_lines() {
 
 function draw_triangles() {
 	var how_many_triangles = random_choice([1, 2]);
-	console.log(how_many_triangles);
 
 	for (var i = 0; i < how_many_triangles; i++) {
 		draw_triangle();
@@ -169,11 +178,13 @@ function create_flag() {
 }
 
 function generate_flag() { 
+	possible_colors = COLORS.slice();
+
 	last_svg = paper.project.exportSVG();
 	paper.project.clear();
 
-	draw_lines();
 	draw_triangles();
+	draw_lines();
 	view.draw();
 }
 
