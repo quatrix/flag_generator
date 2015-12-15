@@ -9,10 +9,40 @@ var LINE_HEIGHTS = [R * 3, R * 5, R * 11, R * 17];
 var COLORS = ["#FFFFFF", "#29489E", "#D0091E", "#017A3D", "000000"];
 
 var possible_colors;
+var mode_two_probability;
 
 var ROTATE_OPTIONS = [0, 90, 180, 270];
 
 var last_svg = null;
+var mode_two_changes = 0;
+
+function flag_positions(x) {
+	var pos_options;
+
+	if (!should_apply_mode_two()) {
+		pos_options = [
+			x,
+			FLAG_WIDTH / 2,
+			FLAG_WIDTH - x,
+		];
+	} else {
+		pos_options = [
+			x,
+			FLAG_WIDTH / 4,
+			FLAG_WIDTH / 2,
+			FLAG_WIDTH * 0.75,
+			FLAG_WIDTH - x,
+		];
+	}
+
+	return pos_options;
+}
+
+function scale_shape_if_needed(path) {
+	if (should_apply_mode_two()) {
+		path.scale(random_choice([0.7, 1.3]));
+	}
+}
 
 var TRIANGLE_TYPES = [
 	{ 
@@ -36,15 +66,8 @@ var TRIANGLE_TYPES = [
 					path.position.y = path.position.y + 70;
 				}
 			} else {
-				var pos_options = [
-					path.position.x, 
-					FLAG_WIDTH / 2,
-					FLAG_WIDTH - path.position.x
-				];
-
-				path.position.x = random_choice(pos_options);
+				path.position.x = random_choice(flag_positions(path.position.x));
 			}
-
 		},
 	},
 	{
@@ -59,21 +82,13 @@ var TRIANGLE_TYPES = [
 		on_draw: function(path) {
 			var rotate_angle = random_choice(ROTATE_OPTIONS);
 
-			var pos_options = [
-				path.position.x, 
-				FLAG_WIDTH / 2,
-				FLAG_WIDTH - path.position.x
-			];
-
-			path.position.x = random_choice(pos_options);
-
+			path.position.x = random_choice(flag_positions(path.position.x));
 
 			path.rotate(rotate_angle);
 		
 			if (rotate_angle == 180) {
 				path.position.y = path.position.y + 50;
 			}
-
 		},
 	}
 ]
@@ -84,6 +99,7 @@ function random_choice(l) {
 	return l[Math.floor(Math.random() * l.length)];
 }
 
+
 function draw_line(y, height, color) {
 	var line = new Path.Rectangle(0, y, FLAG_WIDTH, height);
 	line.fillColor = color;
@@ -91,32 +107,41 @@ function draw_line(y, height, color) {
 }
 
 function draw_triangle() {
-    var triangle = new Path();
+    var path = new Path();
 	var type = random_choice(TRIANGLE_TYPES);
 
 	for (var i = 0; i < 3; i++) {
-		triangle.add(new Point(type.points[i][0], type.points[i][1]));
+		path.add(new Point(type.points[i][0], type.points[i][1]));
 	}
 
-	triangle.closed = true;
+	path.closed = true;
 
-	var color = random_choice(possible_colors);
-	var index = possible_colors.indexOf(color);
-	console.log("BEFORE", possible_colors);
-	possible_colors.splice(index, 1);
-	console.log("AFTER", possible_colors);
+	var color
 
-	triangle.fillColor = color;
+	if (!should_apply_mode_two()) {
+		if (possible_colors.length > 0) {
+			color = random_choice(possible_colors);
+			var index = possible_colors.indexOf(color);
+			possible_colors.splice(index, 1);
+		} else {
+			color = random_choice(COLORS);
+		}
+
+	} else {
+		color = random_choice(COLORS);
+	}
+
+	path.fillColor = color;
 
 	if (random_choice([true, false])) {
-		var inner_triangle = triangle.clone();
+		var inner_triangle = path.clone();
 		inner_triangle.scale(0.85);
 		inner_triangle.position.x = inner_triangle.position.x + type.offset_inner_x;
 		inner_triangle.position.y = inner_triangle.position.y + type.offset_inner_y;
 
 		var path = new CompoundPath({
 			children: [
-				triangle,
+				path,
 				inner_triangle,
 			],
 			fillColor: color
@@ -124,8 +149,27 @@ function draw_triangle() {
 
 		type.on_draw(path);
 	} else { 
-		type.on_draw(triangle);
+		type.on_draw(path);
 	}
+
+	scale_shape_if_needed(path);
+
+}
+
+
+
+function should_apply_mode_two() {
+	if (mode_two_probability == 0) {
+		return false;
+	}
+
+	var r = random_range(1, mode_two_probability) == 1;
+
+	if (r) {
+		console.log('mode two changes: ', ++mode_two_changes);
+	}
+
+	return r;
 }
 
 function draw_lines() {
@@ -133,22 +177,41 @@ function draw_lines() {
 	var next_line_pos = 0;
 	var prev_color = null;
 
+	var tries = 999;
+
 	while (remaning_space > 0) {
+		if (tries-- == 0) {
+			console.error('infinite loop detected in outer space')
+			return;
+		}
 		var line_height = random_choice(LINE_HEIGHTS);
 
 		if (!flag_can_be_filled(remaning_space - line_height)) {
-			console.log("nope!");
 			continue;	
 		}
 
 		var color;
 		
-		while (true) {
+		if (should_apply_mode_two()) {
 			color = random_choice(possible_colors);
+		} else {
+			while (true) {
+				if (tries-- == 0) {
+					console.error('infinite loop detected in selecting color')
+					return;
+				}
 
-			if (color != prev_color) {
-				prev_color = color;
-				break;
+				if (possible_colors.length == 0 || (possible_colors.length == 1 && possible_colors[0] == prev_color)) {
+					color = random_choice(COLORS);
+					break;
+				} else {
+					color = random_choice(possible_colors);
+
+					if (color != prev_color) {
+						prev_color = color;
+						break;
+					}
+				}
 			}
 		}
 
@@ -159,11 +222,20 @@ function draw_lines() {
 }
 
 function draw_triangles() {
-	var how_many_triangles = random_choice([1, 2]);
+	var possible_triangles = 2;
+
+	if (should_apply_mode_two()) {
+		possible_triangles = 5;
+	}
+	var how_many_triangles = random_range(1, possible_triangles)
 
 	for (var i = 0; i < how_many_triangles; i++) {
 		draw_triangle();
 	}
+}
+
+function random_range(min, max) {
+	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function create_flag() {
@@ -173,12 +245,14 @@ function create_flag() {
 	flag.width(FLAG_WIDTH);
 	flag.css("background-color", "gray");
 
-
 	return flag;
 }
 
-function generate_flag() { 
+function generate_flag(probability) { 
+	console.log('generating flag');
+	mode_two_probability = probability;
 	possible_colors = COLORS.slice();
+	mode_two_changes = 0;
 
 	last_svg = paper.project.exportSVG();
 	paper.project.clear();
@@ -212,6 +286,7 @@ function back() {
 }
 
 $(function() {
+	var flag_id;
 	$("#flag_div").append(create_flag());
 
 	var flag = document.getElementById("flag");
