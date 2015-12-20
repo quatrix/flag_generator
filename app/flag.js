@@ -53,9 +53,12 @@ var TriangleTypes = [
 ]
 
 
+var scope = new paper.PaperScope();
+
 var Flag = React.createClass({
 	componentDidMount: function() {
-		this.paper = paper.setup(this.refs.flag);
+		this.paper = scope.setup(this.refs["canvas_" + this.props.name])
+		this.paper_project = this.paper.project;
 	},
 
 	draw_line: function(y, height, color) {
@@ -206,6 +209,8 @@ var Flag = React.createClass({
 	},
 
 	back: function() {
+		this.paper_project.activate();
+
 		if (this.last_svg == null) {
 			return;
 		}
@@ -221,6 +226,8 @@ var Flag = React.createClass({
 	},
 
 	generate: function() {
+		this.paper_project.activate();
+
 		this.last_svg = this.paper.project.exportSVG();
 
 		this.line_heights = [
@@ -241,6 +248,8 @@ var Flag = React.createClass({
 	},
 
 	exportSVG: function() {
+		this.paper_project.activate();
+
 		var url = "data:image/svg+xml;utf8," + encodeURIComponent(
 			this.paper.project.exportSVG({asString:true})
 		);
@@ -256,22 +265,22 @@ var Flag = React.createClass({
 			className="flag"
 			height={this.props.height}
 			width={this.props.width}
-			ref="flag"
+			ref={"canvas_" + this.props.name}
 		/>;
 	},
 });
 
 var FlagContainer = React.createClass({
 	back: function() {
-		this.refs.flag.back();
+		this.refs["flag_" + this.props.name].back();
 	},
 
 	generate: function() {
-		this.refs.flag.generate();
+		this.refs["flag_" + this.props.name].generate();
 	},
 
 	exportSVG: function() {
-		this.refs.flag.exportSVG();
+		this.refs["flag_" + this.props.name].exportSVG();
 	},
 
 	render: function() {
@@ -280,7 +289,8 @@ var FlagContainer = React.createClass({
 			width={this.props.width}
 	 		scale={this.props.scale}
 			mode_two_probability={this.props.mode_two_probability}
-			ref="flag"
+			ref={"flag_" + this.props.name}
+			name={this.props.name}
 		 />
 
 		return (
