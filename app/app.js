@@ -11,19 +11,31 @@ var FLAG_HEIGHT = R * 33;
 
 ReactDOM.render(
 	<div>
+		<h2>Phase 1</h2>
 		<FlagContainer
 			height={FLAG_HEIGHT}
 			width={FLAG_WIDTH}
 			scale={R}
-			mode_two_probability={0}
 			name="mode_a"
+			mode_two_probability={0}
 		 />
+
+		<h2>Phase 2</h2>
 		<FlagContainer
 			height={FLAG_HEIGHT}
 			width={FLAG_WIDTH}
 			scale={R}
-			mode_two_probability={1}
 			name="mode_b"
+			mode_two_probability={15}
+		 />
+
+		<h2>Phase 3</h2>
+		<FlagContainer
+			height={FLAG_HEIGHT}
+			width={FLAG_WIDTH}
+			scale={R}
+			name="mode_c"
+			mode="c"
 		 />
 	</div>,
     document.getElementById("main")

@@ -59,6 +59,7 @@ var Flag = React.createClass({
 	componentDidMount: function() {
 		this.paper = scope.setup(this.refs["canvas_" + this.props.name])
 		this.paper_project = this.paper.project;
+		this.generation = 0;
 	},
 
 	draw_line: function(y, height, color) {
@@ -76,7 +77,7 @@ var Flag = React.createClass({
 	},
 
 	triangle_positions: function(x) {
-		if (!this.should_apply_mode_two()) {
+		if (this.generation == 1 && !this.should_apply_mode_two()) {
 			return [
 				x,
 				this.props.width / 2,
@@ -102,7 +103,7 @@ var Flag = React.createClass({
 	},
 
 	get_line_color: function(prev_color) {
-		if (this.should_apply_mode_two()) {
+		if (this.generation >= 4 || this.should_apply_mode_two()) {
 			return Utils.random_choice(this.colors);
 		} 
 
@@ -156,7 +157,9 @@ var Flag = React.createClass({
 
 		var color;
 
-		if (!this.should_apply_mode_two()) {
+		if (this.generation >= 5) {
+			color = Utils.random_choice(this.colors);
+		} else if (!this.should_apply_mode_two()) {
 			if (this.possible_colors.length > 0) {
 				color = Utils.random_choice(this.possible_colors);
 				var index = this.possible_colors.indexOf(color);
@@ -189,8 +192,20 @@ var Flag = React.createClass({
 
 		type.on_draw(path, this);
 
-		if (this.should_apply_mode_two()) {
+		if (this.generation == 1 && this.should_apply_mode_two()) {
 			path.scale(Utils.random_choice([0.7, 1.3]));
+		}
+
+		if (this.generation >= 3) {
+			if (Utils.random_choice([true, false])) {
+				path.scale(this.x_factor / 100 + 1)
+			} else {
+				if (this.x_factor >= 100) {
+					path.scale(0)
+				} else {
+					path.scale(1 - this.x_factor / 100)
+				}
+			}
 		}
 	},
 
@@ -199,6 +214,10 @@ var Flag = React.createClass({
 
 		if (this.should_apply_mode_two()) {
 			possible_triangles = 5;
+		}
+
+		if (this.generation >= 6) {
+			possible_triangles = this.y_factor;
 		}
 
 		var how_many_triangles = Utils.random_range(1, possible_triangles)
@@ -224,8 +243,27 @@ var Flag = React.createClass({
 
 		this.paper.view.draw();
 	},
+	
+	handle_generation_counts: function() {
+		if (this.props.mode == "c") {
+			this.generation = (this.generation++) % 20;
+			this.generation++;
+		}
+
+		if (this.generation == 1) {
+			this.x_factor = 0;
+		}
+		
+		if (this.generation % 2 == 0) {
+			this.x_factor = this.x_factor + 10;
+		}
+
+		this.y_factor = this.generation;
+	},
 
 	generate: function() {
+		this.handle_generation_counts();
+
 		this.paper_project.activate();
 
 		this.last_svg = this.paper.project.exportSVG();
@@ -291,6 +329,7 @@ var FlagContainer = React.createClass({
 			mode_two_probability={this.props.mode_two_probability}
 			ref={"flag_" + this.props.name}
 			name={this.props.name}
+			mode={this.props.mode}
 		 />
 
 		return (
