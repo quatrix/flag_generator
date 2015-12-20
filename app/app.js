@@ -1,6 +1,6 @@
 import ReactDOM from "react-dom";
 import React from "react";
-import Flag from "./flag";
+import FlagContainer from "./flag";
 
 require("./style.css");
 
@@ -10,6 +10,11 @@ var FLAG_WIDTH = R * 44;
 var FLAG_HEIGHT = R * 33;
 
 ReactDOM.render(
-	<Flag height={FLAG_HEIGHT} width={FLAG_WIDTH} />,
+	<FlagContainer
+		height={FLAG_HEIGHT}
+		width={FLAG_WIDTH}
+		scale={R}
+		mode_two_probability={0}
+	 />,
     document.getElementById("main")
 );
